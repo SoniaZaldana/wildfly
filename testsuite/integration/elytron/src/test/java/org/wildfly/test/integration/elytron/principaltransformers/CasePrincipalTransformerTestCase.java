@@ -77,19 +77,9 @@ public class CasePrincipalTransformerTestCase {
      */
     @Test
     @OperateOnDeployment(DEP_SECURITY_DOMAIN)
-    public void testPassingUserAndCorrectPassword(@ArquillianResource URL webAppURL) throws Exception {
+    public void testPassingExistingUser(@ArquillianResource URL webAppURL) throws Exception {
         URL url = prepareUrl(webAppURL);
-        Utils.makeCallWithBasicAuthn(url, "user1", PASSWORD, SC_OK);
-    }
-
-    /**
-     * Test checks that authentication fails for incorrect password if 'case-principal-transformer' is used.
-     */
-    @Test
-    @OperateOnDeployment(DEP_SECURITY_DOMAIN)
-    public void testPassingUserAndWrongPassword(@ArquillianResource URL webAppURL) throws Exception {
-        URL url = prepareUrl(webAppURL);
-        Utils.makeCallWithBasicAuthn(url, USER, "wrongPassword", SC_UNAUTHORIZED);
+        Utils.makeCallWithBasicAuthn(url, "user1", PASSWORD, SC_OK); // "USER1" is stored in the realm
     }
 
     /**
@@ -98,9 +88,21 @@ public class CasePrincipalTransformerTestCase {
      */
     @Test
     @OperateOnDeployment(DEP_SECURITY_DOMAIN)
-    public void testPassingWrongUserAndWrongPassword(@ArquillianResource URL webAppURL) throws Exception {
+    public void testPassingNonexistentUser(@ArquillianResource URL webAppURL) throws Exception {
         URL url = prepareUrl(webAppURL);
-        Utils.makeCallWithBasicAuthn(url, "wrongUser", "wrongPassword", SC_UNAUTHORIZED);
+        Utils.makeCallWithBasicAuthn(url, "wrongUser", PASSWORD, SC_UNAUTHORIZED);
+    }
+
+    /**
+     * Tests whether authentication fails when the principal transformer is not configured
+     */
+    @Test
+    @OperateOnDeployment(DEP_SECURITY_DOMAIN)
+    public void testPassingExistingUserWithoutPrincipalTransformer(@ArquillianResource URL webAppURL, ManagementClient managementClient) throws Exception {
+        SetupTask.removePrincipalTransformer(managementClient);
+        URL url = prepareUrl(webAppURL);
+        Utils.makeCallWithBasicAuthn(url,"user1", PASSWORD, SC_UNAUTHORIZED); // "USER1" is in the realm
+        SetupTask.addPrincipalTransformer(managementClient);
     }
 
     private URL prepareUrl(URL url) throws MalformedURLException {
@@ -150,6 +152,25 @@ public class CasePrincipalTransformerTestCase {
                 cli.sendLine(String.format("/subsystem=elytron/http-authentication-factory=%s:remove()", ELYTRON_SECURITY));
                 cli.sendLine(String.format("/subsystem=elytron/case-principal-transformer=%s:remove()", PRINCIPAL_TRANSFORMER));
                 domain.remove(cli);
+            }
+            ServerReload.reloadIfRequired(managementClient);
+        }
+
+        public static void removePrincipalTransformer(ManagementClient managementClient) throws Exception{
+            try (CLIWrapper cli = new CLIWrapper(true)) {
+                cli.sendLine(String.format(
+                        "/subsystem=elytron/security-domain=%s:undefine-attribute(name=realms[0].principal-transformer)",
+                        ELYTRON_SECURITY));
+
+            }
+            ServerReload.reloadIfRequired(managementClient);
+        }
+
+        public static void addPrincipalTransformer(ManagementClient managementClient) throws Exception {
+            try (CLIWrapper cli = new CLIWrapper(true)) {
+                cli.sendLine(String.format(
+                        "/subsystem=elytron/security-domain=%s:write-attribute(name=realms[0].principal-transformer,value=%s)",
+                        ELYTRON_SECURITY, PRINCIPAL_TRANSFORMER));
             }
             ServerReload.reloadIfRequired(managementClient);
         }

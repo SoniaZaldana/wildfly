@@ -23,10 +23,8 @@
 package org.wildfly.test.integration.elytron.ssl;
 
 import static java.security.AccessController.doPrivileged;
-import static org.jboss.as.test.integration.security.common.SSLTruststoreUtil.HTTPS_PORT;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PrivilegedAction;
 import java.security.Security;
@@ -38,13 +36,14 @@ import javax.ws.rs.core.Response;
 import org.codehaus.plexus.util.FileUtils;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
+import org.jboss.arquillian.container.test.api.TargetsContainer;
 import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.arquillian.test.api.ArquillianResource;
 import org.jboss.as.arquillian.api.ServerSetup;
 import org.jboss.as.controller.client.ModelControllerClient;
 import org.jboss.as.test.integration.management.util.CLIWrapper;
 import org.jboss.as.test.integration.security.common.CoreUtils;
 import org.jboss.as.test.integration.security.common.SecurityTestConstants;
-import org.jboss.as.test.shared.TestSuiteEnvironment;
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -95,11 +94,16 @@ public class UndertowSSLv2HelloTestCase {
     private static final String DEFAULT_CONTEXT = "DefaultContext";
     private static final String SSLV2HELLO_CONTEXT_ONE_WAY = "SSLv2HelloContextOneWay";
     private static final String HTTPS = "https";
-    private static URL securedRootUrl;
     public static String disabledAlgorithms;
+    public static final String SSLV2HELLO_CONTAINER = "sslv2hello";
+
+    @ArquillianResource
+    //@TargetsContainer(SSLV2HELLO_CONTAINER)
+    private URL securedRootUrl;
 
     // just to make server setup task work
     @Deployment(testable = false)
+    @TargetsContainer(SSLV2HELLO_CONTAINER)
     public static WebArchive createDeployment() {
         return ShrinkWrap.create(WebArchive.class, NAME + ".war")
                 .add(new StringAsset("index page"), "index.html");
@@ -111,12 +115,6 @@ public class UndertowSSLv2HelloTestCase {
         if (disabledAlgorithms != null && (disabledAlgorithms.contains("TLSv1") || disabledAlgorithms.contains("TLSv1.1"))) {
             // reset the disabled algorithms to make sure that the protocols required in this test are available
             Security.setProperty("jdk.tls.disabledAlgorithms", "");
-        }
-
-        try {
-            securedRootUrl = new URL("https", TestSuiteEnvironment.getServerAddress(), HTTPS_PORT, "");
-        } catch (MalformedURLException ex) {
-            throw new IllegalStateException("Unable to create HTTPS URL to server root", ex);
         }
     }
 

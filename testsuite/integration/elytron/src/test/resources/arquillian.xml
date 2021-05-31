@@ -15,4 +15,15 @@
         </configuration>
     </container>
 
+    <container qualifier="sslv2hello">
+        <configuration>
+            <property name="javaVmArguments">-Djava.security.properties=${security.properties} ${server.jvm.args}</property>
+            <property name="serverConfig">${jboss.server.config.file.name:standalone.xml}</property>
+            <property name="jbossArguments">${jboss.args}</property>
+            <property name="allowConnectingToRunningServer">true</property>
+            <property name="managementAddress">${node0:127.0.0.1}</property>
+            <property name="managementPort">${as.managementPort:9990}</property>
+        </configuration>
+    </container>
+
 </arquillian>
